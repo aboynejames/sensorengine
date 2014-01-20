@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>HTML5 video control</title>
+	<!--<link rel="stylesheet" media="screen" href="styles.css" >-->
+		<script type="text/javascript" src="js/jquery-2.0.3.min.js"></script>
+</head>
+<body>
+
+<div id="sensor"></div>
+
+<div class="main">
+  <h2>Device Orientation</h2>
+  <table>
+    <tr>
+      <td>Event Supported</td>
+      <td id="doEvent"></td>
+    </tr>
+    <tr>
+      <td>Tilt Left/Right [gamma]</td>
+      <td id="doTiltLR"></td>
+    </tr>
+    <tr>
+      <td>Tilt Front/Back [beta]</td>
+      <td id="doTiltFB"></td>
+    </tr>
+    <tr>
+      <td>Direction [alpha]</td>
+      <td id="doDirection"></td>
+    </tr>
+   </table>
+</div>
+
+
+
+<div class="container" style="perspective: 300;">
+  <img src="mepathlogo.png" id="imgLogo" class="logo">
+</div>
+
+<div id="stopsensor"><h1>Stop</h1></div>
+
+<div id="geo"></div>
+<div id="geo2"></div>
+<script>
+
+$(document).ready(function(){
+	//INITIALIZE
+	$("#sensor").html('waiting');
+	
+    init();
+    var count = 0;
+    
+    function init() {
+      if (window.DeviceOrientationEvent) {
+      
+      	window.addEventListener('deviceorientation', deviceOrientationHandler, false);
+
+      } 
+      else {
+        document.getElementById("doEvent").innerHTML = "Not supported on your device or browser.  Sorry."
+      }
+    }
+  
+    function deviceOrientationHandler(eventData) {
+    
+            document.getElementById("doEvent").innerHTML = "DeviceOrientation";
+        // Listen for the deviceorientation event and handle the raw data
+          // gamma is the left-to-right tilt in degrees, where right is positive
+          var tiltLR = eventData.gamma;
+          
+          // beta is the front-to-back tilt in degrees, where front is positive
+          var tiltFB = eventData.beta;
+          
+          // alpha is the compass direction the device is facing in degrees
+          var dir = eventData.alpha
+      document.getElementById("doTiltLR").innerHTML = Math.round(tiltLR);
+      document.getElementById("doTiltFB").innerHTML = Math.round(tiltFB);
+      document.getElementById("doDirection").innerHTML = Math.round(dir);
+      
+      // Apply the transform to the image
+      var logo = document.getElementById("imgLogo");
+      logo.style.webkitTransform = "rotate("+ tiltLR +"deg) rotate3d(1,0,0, "+ (tiltFB*-1)+"deg)";
+      logo.style.MozTransform = "rotate("+ tiltLR +"deg)";
+      logo.style.transform = "rotate("+ tiltLR +"deg) rotate3d(1,0,0, "+ (tiltFB*-1)+"deg)";
+    }
+    
+    
+    // Some other fun rotations to try...
+    //var rotation = "rotate3d(0,1,0, "+ (tiltLR*-1)+"deg) rotate3d(1,0,0, "+ (tiltFB*-1)+"deg)";
+    //var rotation = "rotate("+ tiltLR +"deg) rotate3d(0,1,0, "+ (tiltLR*-1)+"deg) rotate3d(1,0,0, "+ (tiltFB*-1)+"deg)";
+  
+  
+  	$("#stopsensor").click(function(e) {
+console.log('stop');
+
+		//window.removeEventListener('devicemotion', deviceMotionHandler, false);
+		window.removeEventListener('deviceorientation', deviceOrientationHandler, false);
+
+
+//livepouch.allDocslist();
+	}); 
+  
+  
+  if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(success, error);
+} else {
+  error('not supported');
+}
+
+function success(position) {
+
+console.log(position.coords.latitude);
+	$("#geo").html(position.coords.latitude);
+	$("#geo2").html(position.coords.longitude);
+};
+
+function error(positioner) {
+
+console.log(positioner);
+
+};
+  
+  
+  
+  
+});
+</script>
+
+</body>
+</html>

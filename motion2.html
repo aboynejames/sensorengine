@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html  lang="en" manifest="sensor.appcache" > <!--manifest="sensor.appcache"-->
+<head>
+	<meta charset="utf-8">
+	<title>HTML5 video control</title>
+	<!--<link rel="stylesheet" media="screen" href="styles.css" >-->
+		<script type="text/javascript" src="js/jquery-2.0.3.min.js"></script>
+		<script type="text/javascript" src="js/pouchdb-1.1.0.min.js"></script>
+		<script type="text/javascript" src="js/IndexedDBShim.min.js"></script>
+		<script type="text/javascript" src="pouchdbutility.js"></script>
+
+</head>
+<body>
+
+<div id="sensor"></div>
+
+<div class="main">
+  <h2>Device Motion v24</h2>
+  <table>
+    <tr>
+      <td>Event Supported</td>
+      <td id="dmEvent"></td>
+    </tr>
+    <tr>
+      <td>acceleration</td>
+      <td id="moAccel"></td>
+    </tr>
+    <tr>
+      <td>accelerationIncludingGravity</td>
+      <td id="moAccelGrav"></td>
+    </tr>
+    <tr>
+      <td>rotationRate</td>
+      <td id="moRotation"></td>
+    </tr>
+    <tr>
+      <td>interval</td>
+      <td id="moInterval"></td>
+    </tr>
+  </table>
+    <h2>Device Orientation</h2>
+  <table>
+    <tr>
+      <td>Event Supported</td>
+      <td id="doEvent"></td>
+    </tr>
+    <tr>
+      <td>Tilt Left/Right [gamma]</td>
+      <td id="doTiltLR"></td>
+    </tr>
+    <tr>
+      <td>Tilt Front/Back [beta]</td>
+      <td id="doTiltFB"></td>
+    </tr>
+    <tr>
+      <td>Direction [alpha]</td>
+      <td id="doDirection"></td>
+    </tr>
+   </table>
+  
+</div>
+
+<div id="geo"></div>
+<div id="geo2"></div>
+
+<div id="syncdatatocouchdb"><h1>save back to couchdb</h1></div>
+
+<div id="startsensor"><h1>Start</h1></div>
+
+<div id="stopsensor"><h1>Stop</h1></div>
+
+<div id="deletepouch"><h1>Delete pouch</h1></div>
+
+
+<script>
+
+$(document).ready(function(){
+
+	//INITIALIZE
+	$("#sensor").html('waiting');
+	/*
+	* start the sensor collection
+	*
+	*/
+	$("#startsensor").click(function(e) {
+console.log('start');
+
+		init();
+    
+	}); 
+   
+	$("#sensor").html('waiting');
+	
+	/*
+	* stop the sensor collection
+	*
+	*/
+	$("#stopsensor").click(function(e) {
+console.log('stop');
+
+		window.removeEventListener('devicemotion', deviceMotionHandler, false);
+		window.removeEventListener('deviceorientation', deviceOrientationHandler, false);
+//livepouch.allDocslist();
+	}); 
+    
+    	/*
+	* delete poouchdb
+	*
+	*/
+	$("#deletepouch").click(function(e) {
+console.log('deletepouch');
+		livepouch.deletePouch();
+    
+	}); 
+    
+
+
+    function init() {
+      if ((window.DeviceMotionEvent) || ('listenForDeviceMovement' in window)) {
+        window.addEventListener('devicemotion', deviceMotionHandler, false);
+      }
+      else {
+        document.getElementById("dmEvent").innerHTML = "Not supported on your device or browser.  Sorry."
+      }
+
+ if (window.DeviceOrientationEvent) {
+      
+      	window.addEventListener('deviceorientation', deviceOrientationHandler, false);
+
+      } 
+      else {
+        document.getElementById("doEvent").innerHTML = "Not supported on your device or browser.  Sorry."
+      }
+ 
+}
+
+  if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(success, error);
+} else {
+  error('not supported');
+}
+
+function success(position) {
+
+console.log(position.coords.latitude);
+	$("#geo").html(position.coords.latitude);
+	$("#geo2").html(position.coords.longitude);
+	var Geoobjectforpouch = {};
+      Geoobjectforpouch['geolocation'] = [position.coords.latitude, position.coords.longitude];
+//console.log(Orientationobjectforpouch);
+	// save to pouch
+	livepouch.singleSave(Geoobjectforpouch); 
+	
+};
+
+function error(positioner) {
+
+console.log(positioner);
+
+};
+  
+    
+    function deviceMotionHandler(eventData) {
+      var eventobjectforpouch = {};
+      var info;
+      var xyz = "[X, Y, Z]";
+//console.log(info);
+//console.log('then xyz'); 
+//console.log(xyz);      
+console.log('being called stop motion'); 
+//console.log(eventData);
+//console.log(eventData.timeStamp);
+      // Grab the acceleration including gravity from the results
+      var acceleration = eventData.acceleration;
+      info = xyz.replace("X", round(acceleration.x));
+//console.log(info);
+//console.log('set first x')      
+      info = info.replace("Y", round(acceleration.y));
+      info = info.replace("Z", round(acceleration.z));
+      document.getElementById("moAccel").innerHTML = info;
+//console.log(info);
+//console.log('then accer');
+	// form array to save in pouchdb
+	var accelldata = [];
+	accelldata = [eventData.timeStamp, info]; 
+	eventobjectforpouch['acc'] = accelldata;
+
+
+
+      // Grab the acceleration including gravity from the results
+      acceleration = eventData.accelerationIncludingGravity;
+      info1 = xyz.replace("X", round(acceleration.x));
+      info1 = info.replace("Y", round(acceleration.y));
+      info1 = info.replace("Z", round(acceleration.z));
+      document.getElementById("moAccelGrav").innerHTML = info;
+//console.log(info1);
+//console.log('then gravity')
+	var gravitaccdata = [];
+	gravitaccdata = [eventData.timeStamp, info1]; 
+	eventobjectforpouch['accg'] = gravitaccdata;
+
+      // Grab the acceleration including gravity from the results
+      var rotation = eventData.rotationRate;
+      info2 = xyz.replace("X", round(rotation.alpha));
+      info2 = info.replace("Y", round(rotation.beta));
+      info2 = info.replace("Z", round(rotation.gamma));
+      document.getElementById("moRotation").innerHTML = info;
+//console.log(info2);
+//console.log('then rote rate');
+	var roteratedata = [];
+	roteratedata = [eventData.timeStamp, info1]; 
+	eventobjectforpouch['roterate'] = roteratedata;
+
+
+
+      info = eventData.interval;
+      document.getElementById("moInterval").innerHTML = info;
+//console.log(info);
+//console.log('then interval')
+
+//console.log(eventobjectforpouch);
+
+//console.log(info);
+//console.log('then xyz'); 
+//console.log(xyz);
+
+	// save to pouch
+	livepouch.singleSave(eventobjectforpouch);
+	
+	// return the save docs
+//	livepouch.allDocs();
+	}
+
+    function round(val) {
+      var amt = 10;
+      return Math.round(val * amt) /  amt;
+    }
+
+    function deviceOrientationHandler(eventData) {    
+            document.getElementById("doEvent").innerHTML = "DeviceOrientation";
+        // Listen for the deviceorientation event and handle the raw data
+          // gamma is the left-to-right tilt in degrees, where right is positive
+          var tiltLR = eventData.gamma;
+          
+          // beta is the front-to-back tilt in degrees, where front is positive
+          var tiltFB = eventData.beta;
+          
+          // alpha is the compass direction the device is facing in degrees
+          var dir = eventData.alpha
+
+      document.getElementById("doTiltLR").innerHTML = Math.round(tiltLR);
+      document.getElementById("doTiltFB").innerHTML = Math.round(tiltFB);
+      document.getElementById("doDirection").innerHTML = Math.round(dir);
+      
+     // form into save object
+	var orientationgroup = [];
+	orientationgroup.push(eventData.timeStamp);
+	orientationgroup.push(Math.round(tiltLR));
+	orientationgroup.push(Math.round(tiltFB));
+	orientationgroup.push(dir);
+//console.log('orientation');
+//console.log(orientationgroup);
+	var Orientationobjectforpouch = {};
+      Orientationobjectforpouch['orientation'] = orientationgroup;
+//console.log(Orientationobjectforpouch);
+	// save to pouch
+	livepouch.singleSave(Orientationobjectforpouch); 
+
+    }
+    
+    function deviceOrientationHandlerStop(event) {
+   console.log('being called stop oriendtation'); 
+      document.getElementById("doTiltLR").innerHTML = 0;
+      document.getElementById("doTiltFB").innerHTML = 0;
+      document.getElementById("doDirection").innerHTML = 987;
+	}
+
+	/*
+	* Clear pouchDB
+	*
+	*/
+	$("#syncdatatocouchdb").click(function(e) {
+console.log('click');
+	//livepouch.allDocs();
+	// first get a list of all the data new to pouchdb
+		function sensorlocalDatalog(callback) {  
+			livepouch.allDocs(callback)
+			//livepouch.changeLog(callback);
+			//livepouch.mapQueryname(selectedlanenow, callback);
+		}
+		
+		sensorlocalDatalog( function(firstreturn) {
+//console.log(firstreturn);
+			// post to node server that will hand over to couchdb
+			firstreturn.rows.forEach(function (datatforcouch) {
+			
+			if(datatforcouch.doc.acc)
+			{
+				// form JSON to sync back to couch
+				buildsyncSensor = {};
+				buildsyncSensor.acc = datatforcouch.doc.acc;
+				buildsyncSensor.accg = datatforcouch.doc.accg;
+				buildsyncSensor.roterate = datatforcouch.doc.roterate;
+				var datatforcouchm = JSON.stringify(buildsyncSensor);
+//console.log(datatforcouch);
+				$.post("http://localhost:8844/synctocouchdb/", datatforcouchm ,function(result){
+					// put a message back to UI to tell of a successful sync
+//console.log(result);	
+				});
+			}
+			if(datatforcouch.doc.geolocation)
+			{
+				buildsyncSensorG = {};
+				buildsyncSensorG.geolocation = datatforcouch.doc.geolocation;
+				var datatforcouchg = JSON.stringify(buildsyncSensorG);
+				$.post("http://localhost:8844/synctocouchdb/", datatforcouchg ,function(result){
+					// put a message back to UI to tell of a successful sync
+//console.log(result);	
+				});			
+			
+			}
+			else {
+//console.log('second save elelments');			
+				buildsyncSensorO = {};
+				buildsyncSensorO.orientation = datatforcouch.doc.orientation;
+				var datatforcoucho = JSON.stringify(buildsyncSensorO);
+				$.post("localhost:8844/synctocouchdb/", datatforcoucho ,function(result){
+					// put a message back to UI to tell of a successful sync
+//console.log(result);	
+				});
+			}
+
+			//livepouch.deletePouch();
+			});
+		});
+	
+	});
+
+
+	livepouch = new pouchdbSettings();
+
+
+});
+</script>
+
+</body>
+</html>
